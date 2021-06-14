@@ -20,14 +20,13 @@
 #include "main.h"
 
 struct Time {uint8_t hour, minute, second, day;} time; //в этих переменных храним время
-struct Util {char setup_state, eachhoursignal_state; uint8_t bright, seconds;} utils; //утилитарные переменные
+struct Util {char setup_state, eachhoursignal_state; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
 struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //тут храним все для будильника
 struct Radio {uint16_t current_frequency; char stereo_state;} radio; //тут все для радио
 struct But_flags {char mode, set, program;} but_flags; //ФЛАГИ для кнопок
-struct Flags {char encoder_handler, mode, alarm_state, zummer;} flags; //общая библиотека флагов
+struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal;} flags; //общая библиотека флагов
 enum Modes {CLOCK, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, STANDBY} selected_mode; //режимы отображения без подрежимов
 enum Days  {MONDAY = 1, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY} days; //перечисление дней для настройки непосредственно дней
-uint8_t digits[4]; //служебная переменная для отображения разрядов
 
 const uint8_t key1 = PC2;
 const uint8_t key2 = PC3;
@@ -200,9 +199,8 @@ void encoder_procedure(char state)
 	}
 	if (selected_mode == DAYSTATE)//Вправо покрутили - установили будильник, влево - выключили
 	{
-		uint8_t i = days; //узнали в каком мы сейчас дне
-		if (state) alarm1.daystates[i] = 1;
-		else alarm1.daystates[i] = 0;
+		if (state) alarm1.daystates[days] = 1;
+		else alarm1.daystates[days] = 0;
 	}
 	if (selected_mode == BRIGHT)
 	{
@@ -241,16 +239,16 @@ char check_analog_button(void){
 	else return 0;
 }
 
-char check_time(void)
+void check_time(void)
 {
 	if ((alarm1.hour == time.hour)&(alarm1.minute == time.minute)&(alarm1.second == time.second)) //совпали часы, минуты, секунды
 	{
-		uint8_t i = time.day; //присваиваем переменной i число, соответствующее дню недели
-		if (alarm1.daystates[i]) //если в соответсвующей ячейке с будильниками находится единица, то есть будильник включен
+		if (alarm1.daystates[time.day]) //если в соответсвующей ячейке с будильниками находится единица, то есть будильник включен
 		{
 			flags.alarm_state = 1; //ставится флаг сработавшего будильника
 		}
 	}
+	if (utils.eachhoursignal_state&(time.minute==0)&(time.second==0)) flags.eachhoursignal = 1; 
 }
 
 void ADC_init(void)
@@ -292,44 +290,64 @@ void setCathode(uint8_t num)
 	switch(num)
 	{
 		case 0:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 1:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 2:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 3:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 4:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 5:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 6:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 7:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 8:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 		case 9:
-		PORTD |= (1<<PD0)|(1<<PD1);
-		PORTD &=~(1<<PD2)|(1<<PD3);
+		PORTD |= (1<<PD0);
+		PORTD |= (1<<PD1);
+		PORTD |= (1<<PD2);
+		PORTD |= (1<<PD3);
 		break;
 	}
 }
@@ -348,75 +366,76 @@ void display(void)
 {
 		if (selected_mode == CLOCK)
 		{
-			digits[0] = time.hour/100;
-			digits[1] = time.hour%100/10;
-			digits[2] = time.minute%10;
-			digits[3] = time.minute%100/10;
+			utils.digits[0] = time.hour/100;
+			utils.digits[1] = time.hour%100/10;
+			utils.digits[2] = time.minute%10;
+			utils.digits[3] = time.minute%100/10;
 		}
 		if (selected_mode == SETHOUR)
 		{
-			digits[0] = time.hour/100;
-			digits[1] = time.hour%100/10;
-			digits[2] = 0;
-			digits[3] = 0;
+			utils.digits[0] = time.hour/100;
+			utils.digits[1] = time.hour%100/10;
+			utils.digits[2] = 0;
+			utils.digits[3] = 0;
 		}
 		if (selected_mode == SETMINUTE)
 		{
-			digits[0] = 0;
-			digits[1] = 0;
-			digits[2] = time.minute%10;
-			digits[3] = time.minute%100/10;
+			utils.digits[0] = 0;
+			utils.digits[1] = 0;
+			utils.digits[2] = time.minute%10;
+			utils.digits[3] = time.minute%100/10;
 		}
 		if (selected_mode == SETALARMHOUR)
 		{
-			digits[0] = alarm1.hour/100;
-			digits[1] = alarm1.hour%100/10;
-			digits[2] = 0;
-			digits[3] = 0;
+			utils.digits[0] = alarm1.hour/100;
+			utils.digits[1] = alarm1.hour%100/10;
+			utils.digits[2] = 0;
+			utils.digits[3] = 0;
 		}
 		if (selected_mode == SETALARMMINUTE)
 		{
-			digits[0] = 0;
-			digits[1] = 0;
-			digits[2] = alarm1.minute%10;
-			digits[3] = alarm1.minute%100/10;
+			utils.digits[0] = 0;
+			utils.digits[1] = 0;
+			utils.digits[2] = alarm1.minute%10;
+			utils.digits[3] = alarm1.minute%100/10;
 		}
 		if (selected_mode == SETDAY)
 		{
-			digits[0] = 0;
-			digits[1] = 0;
-			digits[2] = 0;
-			digits[3] = time.day;
+			utils.digits[0] = 0;
+			utils.digits[1] = 0;
+			utils.digits[2] = 0;
+			utils.digits[3] = time.day;
 		}
 		if (selected_mode == DAYSTATE) //ВНИМАНИЕ ВОТ ТУТ ПОДРЕЖИМЫ РАБОТАЮТ, ПРИ ПЕРЕХОДЕ НЕ МЕНЯТЬ selected_mode а менять days, повторное использование кода потому что
 		{
-			uint8_t i = days; //спрашиваю какой сейчас день
-			digits[0] = days;
-			digits[1] = 0;
-			digits[2] = 0;
-			digits[3] = alarm1.daystates[i]; //вывожу стейтмент будильника для этого дня
+			utils.digits[0] = days;
+			utils.digits[1] = 0;
+			utils.digits[2] = 0;
+			utils.digits[3] = alarm1.daystates[days]; //вывожу стейтмент будильника для этого дня
 		}
 		if (selected_mode == BRIGHT)
 		{
-			digits[0] = 8;
-			digits[1] = 0;
-			digits[2] = utils.bright%10;
-			digits[3] = utils.bright%10/10;
+			utils.digits[0] = 8;
+			utils.digits[1] = 0;
+			utils.digits[2] = utils.bright%10;
+			utils.digits[3] = utils.bright%10/10;
 		}
 		if (selected_mode == EACHHOURSIG)
 		{
-			digits[0] = 9;
-			digits[1] = 0;
-			digits[2] = 0;
-			digits[3] = utils.eachhoursignal_state;
+			utils.digits[0] = 9;
+			utils.digits[1] = 0;
+			utils.digits[2] = 0;
+			utils.digits[3] = utils.eachhoursignal_state;
 		}
 		if (selected_mode == RADIO_MANUAL)
 		{
-			digits[0] = radio.current_frequency/100; //все настроить надобно
-			digits[1] = radio.current_frequency%100/10;//
-			digits[2] = radio.current_frequency%10;//
-			digits[3] = radio.current_frequency%100/10;//п
+			utils.digits[0] = radio.current_frequency/1000;
+			utils.digits[1] = radio.current_frequency%1000/100;
+			utils.digits[2] = radio.current_frequency%100/10;
+			utils.digits[3] = radio.current_frequency%10;
 		}
+		
+		show(utils.digits);
 }
 
 void RTC_tweak(char what, char how)//what - 1 - часы, 2 - минуты, 3 - день, how - 1 - увеличить, 2 - уменьшить, 3 - обнулить, 4 - задать максимальное значение
@@ -452,7 +471,7 @@ void RTC_tweak(char what, char how)//what - 1 - часы, 2 - минуты, 3 - день, how 
 	I2C_StopCondition();
 }
 
-void Radio_tune(char what, char how)
+void Radio_tune(char what, char how) //нет синхронизации
 {
 	if (what == 1)
 	{

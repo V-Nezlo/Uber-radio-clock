@@ -12,7 +12,6 @@ void si4730_powerup(void)
 	I2C_SendByte(0b00000101);     //вкл только аудиовыходы, можно выводить на I2S (но зачем)
 	I2C_StopCondition();
 	_delay_ms(100);
-	
 }
 
 void si4730_SetFmFreq(uint16_t freq)

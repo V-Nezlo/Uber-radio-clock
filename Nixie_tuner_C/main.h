@@ -25,5 +25,6 @@ void encoder_procedure(char state);
 char check_analog_button(void);
 void RTC_tweak(char what, char how);
 void Radio_tune(char what, char how);
+void show(uint8_t a[]);
 
 #endif /* MAIN_H_ */
