@@ -21,10 +21,25 @@
 #include "si4730.h"
 #include "eeprom.h"
 
+void flag_handler(void);
+void freq_to_eeprom_transfer(char channel, uint16_t freq);
+uint16_t eeprom_to_freq_transfer(char channel);
+void eeprom_readfreqbank(void);
 void encoder_procedure(char state);
+unsigned int ADC_Conversion(void);
 char check_analog_button(void);
+void check_time(void);
+void ADC_init(void);
+void timer1_init(void);
+void timer0_init(void);
+void timer2_init(void);
+void port_init(void);
+void extinterrupt_init();
+void setCathode(uint8_t num);
+void show(uint8_t a[]);
+void display(void);
 void RTC_tweak(char what, char how);
 void Radio_tune(char what, char how);
-void show(uint8_t a[]);
+
 
 #endif /* MAIN_H_ */

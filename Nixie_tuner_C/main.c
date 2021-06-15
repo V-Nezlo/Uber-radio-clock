@@ -13,19 +13,19 @@
 #define SETZERO 3
 #define SETMAX 4
 #define MAXSUPFREQ 10800
-#define MINSUPFREQ 6400
+#define MINSUPFREQ 7600
 #define FREQEDITSTEP 10
 //8970 - 89,7 MHz
 
 #include "main.h"
 
 struct Time {uint8_t hour, minute, second, day;} time; //в этих переменных храним время
-struct Util {char setup_state, eachhoursignal_state; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
+struct Util {char eachhoursignal_state; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
 struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //тут храним все для будильника
-struct Radio {uint16_t current_frequency; char stereo_state;} radio; //тут все для радио
+struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //тут все для радио
 struct But_flags {char mode, set, program;} but_flags; //ФЛАГИ для кнопок
 struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal;} flags; //общая библиотека флагов
-enum Modes {CLOCK, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, STANDBY} selected_mode; //режимы отображения без подрежимов
+enum Modes {CLOCK = 1, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, RADIO_PROGRAM, RADIO_SETPROGFREQ, STANDBY} selected_mode; //режимы отображения без подрежимов
 enum Days  {MONDAY = 1, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY} days; //перечисление дней для настройки непосредственно дней
 
 const uint8_t key1 = PC2;
@@ -62,19 +62,47 @@ ISR (TIMER1_COMPA_vect)
 		case 2:
 		but_flags.program = 1;
 		break;
-		case 3:
-		but_flags.set = 1;
-		break;
 	}
 }
 
 ISR (TIMER0_COMPA_vect)
 {
-	utils.seconds++;
+	if (utils.seconds < 59) utils.seconds++;
+	else utils.seconds = 0;
+}
+
+ISR (TIMER2_COMPB_vect)
+{
+	if ((selected_mode == CLOCK)&(alarm1.isenabled))
+	{
+		uint8_t pwm_counter = OCR2B;
+		static char direction = 0;
+		if ((pwm_counter < 255)&(direction == 0)) OCR2B = OCR2B + 1;
+		else if ((pwm_counter < 255)&(direction == 1)) OCR2B = OCR2B - 1;
+		if ((pwm_counter == 255)&(direction == 0)) direction = 1;
+		else if ((pwm_counter == 255)&(direction == 1)) direction = 0;
+	}
+	else OCR2B = 0xFF;
+}
+
+ISR (INT0_vect)
+{
+	but_flags.set = 1;
 }
 
 void flag_handler(void)
 {
+	//обработчик времени
+	if (utils.seconds == 7)
+	{
+		if ((selected_mode > 1)&(selected_mode <= 9))
+		{
+			selected_mode = 1;
+			utils.seconds = 0;
+		}
+	}
+	//обработчик времени
+	
 	if (flags.encoder_handler == 1)
 	{
 		encoder_procedure(1);
@@ -85,15 +113,53 @@ void flag_handler(void)
 		encoder_procedure(0);
 		flags.encoder_handler = 0;
 	}
+	//Вот тут начинается глобальный обработчик флагов кнопок
+	if (but_flags.set == 1) //если нажата кнопка энкодера
+	{
+		if (selected_mode < 9)
+		{
+			selected_mode++;
+			utils.seconds = 0;
+			
+		}
+		else if (selected_mode == 9)
+		{
+			selected_mode = 1;
+			utils.seconds = 0;
+		}
+	}
 	
+	if (but_flags.mode == 1)//если нажата кнопка часы-радио
+	{
+		if (selected_mode <= 9)
+		{
+			selected_mode = RADIO_MANUAL;
+			radio.current_frequency = eeprom_to_freq_transfer(11);
+		}
+	}
+	
+	if (but_flags.program == 1) //если нажата кнопка програм
+	{
+		if (selected_mode == RADIO_MANUAL)
+		{
+			selected_mode = RADIO_PROGRAM;
+			radio.currentbankfreq = 0;
+			freq_to_eeprom_transfer(11, radio.current_frequency);
+		}
+	}
 }
 
-void freq_to_eeprom_transfer2(char channel, uint16_t freq)
+void freq_to_eeprom_transfer(char channel, uint16_t freq)
 {
 	unsigned char HFreqE = freq >> 8;
 	unsigned char LFreqE = freq & 0x00FF;
-	uint8_t channelAddr1 = channel*2;
-	uint8_t channelAddr2 = channelAddr1 + 1;
+	
+	uint8_t channelAddr1;
+	uint8_t channelAddr2;
+	
+	if (channel == 0) channelAddr1 = 1;
+	else channelAddr1 = channel*2;
+	channelAddr2 = channelAddr1 + 1;
 	EEPROM_write(channelAddr1, LFreqE);
 	EEPROM_write(channelAddr2, HFreqE);
 }
@@ -102,12 +168,28 @@ uint16_t eeprom_to_freq_transfer(char channel)
 {
 	unsigned char HFreqE = 0; 
 	unsigned char LFreqE = 0;
-	uint8_t channelAddr1 = channel*2;
-	uint8_t channelAddr2 = channelAddr1 + 1;
+	
+	uint8_t channelAddr1;
+	uint8_t channelAddr2;
+	
+	if (channel == 0) channelAddr1 = 1; //таким нехитрым способом мы заполняем ячейки 1 и 2
+	else channelAddr1 = channel*2;
+	channelAddr2 = channelAddr1 + 1;
 	LFreqE = EEPROM_read(channelAddr1);
 	HFreqE = EEPROM_read(channelAddr2);
 	uint16_t freq = LFreqE|(HFreqE<<8);
 	return freq;
+}
+
+void eeprom_readfreqbank(void)
+{
+	uint8_t a = 0;
+	radio.currentbankfreq = 0;
+	for (a = 0; a <= 9; ++a) //ВНИМАНИЕ ОЧЕНЬ ВАЖНО, 0 банк не пишется, потому что потому
+	{
+		radio.bankfreq[a] = eeprom_to_freq_transfer(a);			//прочитали значение из еепрома
+		if (radio.bankfreq[a] == 0) radio.freqbankstate[a] = 0; //если значение равно нулю - ставим флаг того что эта ячейка пуста и ее не выводить
+	}
 }
 
 void encoder_procedure(char state)
@@ -130,7 +212,8 @@ void encoder_procedure(char state)
 	
 	if (selected_mode == CLOCK)
 	{
-	//???? Не понятно
+	 if (state) alarm1.isenabled = 1;
+	 else alarm1.isenabled = 0;
 	}
 	if (selected_mode == SETHOUR)
 	{
@@ -220,6 +303,20 @@ void encoder_procedure(char state)
 		if (state) utils.eachhoursignal_state = 1;
 		else utils.eachhoursignal_state = 0;
 	}
+	if (selected_mode == RADIO_PROGRAM)
+	{
+		if (state)
+		{
+			//(radio.currentbankfreq )
+		}
+	}
+	if (selected_mode == RADIO_SETPROGFREQ)
+	{
+		if (state)
+		{
+			
+		}
+	}
 }
 
 unsigned int ADC_Conversion(void)
@@ -232,10 +329,8 @@ unsigned int ADC_Conversion(void)
 char check_analog_button(void){
 	unsigned int analog_value = ADC_Conversion();
 	if (analog_value <= 100) return 0;
-	if ((analog_value >= 100)&(analog_value <= 300))   return 1;
-	if ((analog_value >= 300)&(analog_value <= 600))   return 2;
-	if ((analog_value >= 500)&(analog_value <= 800))   return 3;
-	if ((analog_value >= 1000)&(analog_value <= 1100)) return 4;
+	if ((analog_value >= 100)&(analog_value <= 500))   return 1;
+	if (analog_value >= 500)						   return 2;
 	else return 0;
 }
 
@@ -248,7 +343,8 @@ void check_time(void)
 			flags.alarm_state = 1; //ставится флаг сработавшего будильника
 		}
 	}
-	if (utils.eachhoursignal_state&(time.minute==0)&(time.second==0)) flags.eachhoursignal = 1; 
+	if ((utils.eachhoursignal_state)&(time.minute==0)&(time.second==0)&(time.hour > 6)&(time.hour < 21)) flags.eachhoursignal = 1;
+
 }
 
 void ADC_init(void)
@@ -275,6 +371,15 @@ void timer0_init(void) //этот таймер будет считать секунды
 	TIMSK0 |= (1<<OCIE0A);
 }
 
+void timer2_init(void)
+{
+	TCCR2A |= (1<<COM2B1)|(1<<WGM21)|(1<<WGM20);
+	TCCR2B |= (1<<CS21)|(1<<CS22)|(1<<CS20); //16 мгц\1024 = 15k
+	OCR2B = 0x00;
+	TCNT2 = 0x00;
+	TIMSK2 |= (OCIE2B);
+}
+
 void port_init(void)
 {
 	DDRB = 0xFF;
@@ -283,6 +388,12 @@ void port_init(void)
 	PORTB = 0x00;
 	PORTD = 0x00;
 	PORTC = 0x00;
+}
+
+void extinterrupt_init()
+{
+	EICRA |= (1<<ISC01);
+	EIMSK |= (1<<INT0);
 }
 
 void setCathode(uint8_t num)
@@ -434,6 +545,17 @@ void display(void)
 			utils.digits[2] = radio.current_frequency%100/10;
 			utils.digits[3] = radio.current_frequency%10;
 		}
+		if (selected_mode == RADIO_PROGRAM)
+		{
+			utils.digits[0] = radio.bankfreq[radio.currentbankfreq]/1000;
+			utils.digits[1] = radio.bankfreq[radio.currentbankfreq]%1000/100;
+			utils.digits[2] = radio.bankfreq[radio.currentbankfreq]%100/10;
+			utils.digits[3] = radio.bankfreq[radio.currentbankfreq]%10;
+		}
+		if (selected_mode == RADIO_SETPROGFREQ)
+		{
+			
+		}
 		
 		show(utils.digits);
 }
@@ -471,14 +593,30 @@ void RTC_tweak(char what, char how)//what - 1 - часы, 2 - минуты, 3 - день, how 
 	I2C_StopCondition();
 }
 
-void Radio_tune(char what, char how) //нет синхронизации
+void Radio_tune(char what, char how) //нет обратной связи
 {
 	if (what == 1)
 	{
-		if (how == INCREMENT) si4730_SetAmFreq(radio.current_frequency + FREQEDITSTEP);
-		else if (how == DECREMENT) si4730_SetAmFreq(radio.current_frequency - FREQEDITSTEP);
-		else if (how == SETZERO) si4730_SetAmFreq(MINSUPFREQ);
-		else if (how == SETMAX) si4730_SetAmFreq(MAXSUPFREQ);
+		if (how == INCREMENT)
+		{
+			si4730_SetAmFreq(radio.current_frequency + FREQEDITSTEP);
+			radio.current_frequency = radio.current_frequency + FREQEDITSTEP;
+		} 
+		else if (how == DECREMENT)
+		{
+			si4730_SetAmFreq(radio.current_frequency - FREQEDITSTEP);
+			radio.current_frequency = radio.current_frequency - FREQEDITSTEP;
+		}
+		else if (how == SETZERO)
+		{
+			si4730_SetAmFreq(MINSUPFREQ);
+			radio.current_frequency = MINSUPFREQ;
+		} 
+		else if (how == SETMAX)
+		{
+			si4730_SetAmFreq(MAXSUPFREQ);
+			radio.current_frequency = MAXSUPFREQ;
+		} 
 	}
 }
 
@@ -488,9 +626,11 @@ int main(void)
 	port_init();
 	timer1_init();
 	timer0_init();
+	extinterrupt_init();
     I2C_Init();
 	ADC_init();
 	si4730_powerup();
+	eeprom_readfreqbank();
 
     while (1) 
     {
