@@ -1,7 +1,7 @@
 /*
-Никсевый цифровой тюнер
-Автор - V-Nezlo (vlladimirka@gmail.com)
-Будильник нужно реализовывать внутри микроконтроллера, ds3231 поддерживает только 2 будильника в определенные дни недели
+пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+пїЅпїЅпїЅпїЅпїЅ - V-Nezlo (vlladimirka@gmail.com)
+пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, ds3231 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 2 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 */ 
 
 #define RTCADRR 0b11010001
@@ -19,14 +19,14 @@
 
 #include "main.h"
 
-struct Time {uint8_t hour, minute, second, day;} time; //в этих переменных храним время
-struct Util {char eachhoursignal_state; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
-struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //тут храним все для будильника
-struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //тут все для радио
-struct But_flags {char mode, set, program;} but_flags; //ФЛАГИ для кнопок
-struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal;} flags; //общая библиотека флагов
-enum Modes {CLOCK = 1, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, RADIO_PROGRAM, RADIO_SETPROGFREQ, STANDBY} selected_mode; //режимы отображения без подрежимов
-enum Days  {MONDAY = 1, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY} days; //перечисление дней для настройки непосредственно дней
+struct Time {uint8_t hour, minute, second, day;} time; //пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+struct Util {char eachhoursignal_state, deletefreqconf; uint8_t bright, seconds; uint8_t digits[4];} utils; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+struct But_flags {char mode, set, program;} but_flags; //пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal;} flags; //пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+enum Modes {CLOCK = 1, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, RADIO_PROGRAM, RADIO_SETPROGFREQ, STANDBY} selected_mode; //пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+enum Days  {MONDAY = 1, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY} days; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 
 const uint8_t key1 = PC2;
 const uint8_t key2 = PC3;
@@ -43,10 +43,10 @@ ISR (TIMER1_COMPA_vect)
 	switch(old_state | new_state)
 	{
 	  case 0x01: case 0x0e:
-	  flags.encoder_handler = 1; //вперед
+	  flags.encoder_handler = 1; //пїЅпїЅпїЅпїЅпїЅпїЅ
 	  break;
 	  case 0x04: case 0x0b:
-	  flags.encoder_handler = 2; //назад
+	  flags.encoder_handler = 2; //пїЅпїЅпїЅпїЅпїЅ
 	  break;
 	}
 	old_state = new_state<<2;
@@ -92,7 +92,7 @@ ISR (INT0_vect)
 
 void flag_handler(void)
 {
-	//обработчик времени
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	if (utils.seconds == 7)
 	{
 		if ((selected_mode > 1)&(selected_mode <= 9))
@@ -101,7 +101,6 @@ void flag_handler(void)
 			utils.seconds = 0;
 		}
 	}
-	//обработчик времени
 	
 	if (flags.encoder_handler == 1)
 	{
@@ -113,23 +112,46 @@ void flag_handler(void)
 		encoder_procedure(0);
 		flags.encoder_handler = 0;
 	}
-	//Вот тут начинается глобальный обработчик флагов кнопок
-	if (but_flags.set == 1) //если нажата кнопка энкодера
+	//пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+	if (but_flags.set == 1) //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	{
 		if (selected_mode < 9)
 		{
 			selected_mode++;
 			utils.seconds = 0;
-			
 		}
-		else if (selected_mode == 9)
+		else if (selected_mode == EACHHOURSIG)
 		{
-			selected_mode = 1;
+			selected_mode = CLOCK;
 			utils.seconds = 0;
 		}
+		else if (selected_mode == RADIO_MANUAL)
+		{
+			selected_mode = RADIO_SETPROGFREQ;
+			radio.currentbankfreq = 0;
+			utils.second = 0;
+		}
+		else if ((selected_mode == RADIO_PROGRAM)&(utils.deletefreqconf == 0))
+		{
+			utils.deletefreqconf = 1;
+			utils.second = 0;
+		}
+		else if ((selected_mode == RADIO_PROGRAM)&(utils.deletefreqconf == 1))
+		{
+			radio.bankfreq[radio.currentbankfreq] = 0;
+			radio.freqbankstate[radio.currentbankfreq] = 0;
+			eeprom_to_freq_transfer(radio.currentbankfreq, 0);
+			utils.deletefreqconf = 0;
+			selected_mode = RADIO_MANUAL;
+		}
+		else if (selected_mode == RADIO_SETPROGFREQ)
+		{
+			radio.bankfreq[radio.currentbankfreq] = radio.current_frequency;
+			freq_to_eeprom_transfer(radio.currentbankfreq, radio.current_frequency);
+			selected_mode = RADIO_PROGRAM;
+		}
 	}
-	
-	if (but_flags.mode == 1)//если нажата кнопка часы-радио
+	else if (but_flags.mode == 1)//пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅ
 	{
 		if (selected_mode <= 9)
 		{
@@ -137,14 +159,26 @@ void flag_handler(void)
 			radio.current_frequency = eeprom_to_freq_transfer(11);
 		}
 	}
-	
-	if (but_flags.program == 1) //если нажата кнопка програм
+	else if (but_flags.program == 1) //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	{
-		if (selected_mode == RADIO_MANUAL)
+		if (selected_mode == RADIO_MANUAL) 
 		{
-			selected_mode = RADIO_PROGRAM;
+			for (uint8_t b = 0; b <= 9; ++b) //РїСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё С…РѕС‚СЏ Р±С‹ РѕРґРЅР° С‡Р°СЃС‚РѕС‚Р° РІ Р±Р°РЅРєРµ, РµСЃР»Рё РЅРµС‚ - РїРµСЂРµС…РѕРґРёРј РІ СЂРµР¶РёРј СѓСЃС‚Р°РЅРѕРІРєРё С‡Р°СЃС‚РѕС‚
+			{
+				if (radio.freqbankstate[b] == 1)
+				{
+					selected_mode = RADIO_PROGRAM;
+					radio.currentbankfreq = b;
+					break;
+				}
+				else if (b == 9) selected_mode == RADIO_MANUAL;
+			}
 			radio.currentbankfreq = 0;
 			freq_to_eeprom_transfer(11, radio.current_frequency);
+		}
+		else if (selected_mode == RADIO_PROGRAM)
+		{
+			
 		}
 	}
 }
@@ -172,7 +206,7 @@ uint16_t eeprom_to_freq_transfer(char channel)
 	uint8_t channelAddr1;
 	uint8_t channelAddr2;
 	
-	if (channel == 0) channelAddr1 = 1; //таким нехитрым способом мы заполняем ячейки 1 и 2
+	if (channel == 0) channelAddr1 = 1; //пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 1 пїЅ 2
 	else channelAddr1 = channel*2;
 	channelAddr2 = channelAddr1 + 1;
 	LFreqE = EEPROM_read(channelAddr1);
@@ -185,17 +219,17 @@ void eeprom_readfreqbank(void)
 {
 	uint8_t a = 0;
 	radio.currentbankfreq = 0;
-	for (a = 0; a <= 9; ++a) //ВНИМАНИЕ ОЧЕНЬ ВАЖНО, 0 банк не пишется, потому что потому
+	for (a = 0; a <= 9; ++a) //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, 0 пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 	{
-		radio.bankfreq[a] = eeprom_to_freq_transfer(a);			//прочитали значение из еепрома
-		if (radio.bankfreq[a] == 0) radio.freqbankstate[a] = 0; //если значение равно нулю - ставим флаг того что эта ячейка пуста и ее не выводить
+		radio.bankfreq[a] = eeprom_to_freq_transfer(a);			//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+		if (radio.bankfreq[a] == 0) radio.freqbankstate[a] = 0; //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	}
 }
 
 void encoder_procedure(char state)
 {
-	//смысл таков - если приходит 0 - происходит кручение влево, 1 - вправо
-	//Вообще в этом участке кода мы будем отдельно обрабатывать движения энкодера
+	//пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 0 - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, 1 - пїЅпїЅпїЅпїЅпїЅпїЅ
+	//пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	if (selected_mode == RADIO_MANUAL)
 	{
 		if (state)
@@ -215,7 +249,7 @@ void encoder_procedure(char state)
 	 if (state) alarm1.isenabled = 1;
 	 else alarm1.isenabled = 0;
 	}
-	if (selected_mode == SETHOUR)
+	else if (selected_mode == SETHOUR)
 	{
 		if (state)
 		{
@@ -228,7 +262,7 @@ void encoder_procedure(char state)
 			else RTC_tweak(1, SETMAX);
 		}
 	}
-	if (selected_mode == SETMINUTE)
+	else if (selected_mode == SETMINUTE)
 	{
 		if (state)
 		{
@@ -241,7 +275,7 @@ void encoder_procedure(char state)
 			else RTC_tweak(2, SETMAX);
 		}
 	}
-	if (selected_mode == SETALARMHOUR)
+	else if (selected_mode == SETALARMHOUR)
 	{
 		if (state)
 		{
@@ -254,7 +288,7 @@ void encoder_procedure(char state)
 			else alarm1.hour = 0;
 		}
 	}
-	if (selected_mode == SETALARMMINUTE)
+	else if (selected_mode == SETALARMMINUTE)
 	{
 		if (state)
 		{
@@ -267,7 +301,7 @@ void encoder_procedure(char state)
 			else alarm1.minute = 0;
 		}
 	}
-	if (selected_mode == SETDAY)
+	else if (selected_mode == SETDAY)
 	{
 		if (state)
 		{
@@ -280,12 +314,12 @@ void encoder_procedure(char state)
 			else RTC_tweak(3, SETMAX);
 		}
 	}
-	if (selected_mode == DAYSTATE)//Вправо покрутили - установили будильник, влево - выключили
+	else if (selected_mode == DAYSTATE)//пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	{
 		if (state) alarm1.daystates[days] = 1;
 		else alarm1.daystates[days] = 0;
 	}
-	if (selected_mode == BRIGHT)
+	else if (selected_mode == BRIGHT)
 	{
 		if (state)
 		{
@@ -298,31 +332,87 @@ void encoder_procedure(char state)
 			else utils.bright = MAXBRIGHT;
 		}
 	}
-	if (selected_mode == EACHHOURSIG)
+	else if (selected_mode == EACHHOURSIG)
 	{
 		if (state) utils.eachhoursignal_state = 1;
 		else utils.eachhoursignal_state = 0;
 	}
-	if (selected_mode == RADIO_PROGRAM)
+	else if (selected_mode == RADIO_PROGRAM)
 	{
 		if (state)
 		{
-			//(radio.currentbankfreq )
+			if (radio.currentbankfreq < 9)
+			{
+				uint8_t nextbank = radio.currentbankfreq + 1;
+				for (nextbank; nextbank <= 9; ++nextbank)
+				{
+					if (radio.freqbankstate[nextbank])
+					{
+						radio.currentbankfreq = nextbank;
+						break;
+					}
+				}
+				if (radio.currentbankfreq == 9)
+				{
+					for (uint8_t c = 0; c < 9; ++c )
+					{
+						if (radio.freqbankstate[c])
+						{
+							radio.currentbankfreq = c;
+							break;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			if (radio.currentbankfreq != 0)
+			{
+				uint8_t prevbank = radio.currentbankfreq - 1;
+				for (prevbank; prevbank != 0; --prevbank)
+				{
+					if (radio.freqbankstate[prevbank])
+					{
+						radio.currentbankfreq = prevbank;
+						break;
+					}
+				}
+			}
+			else if (radio.currentbankfreq == 0)
+			{
+				for (uint8_t a = 9;a != 0; --a)
+				{
+					if (radio.freqbankstate[a])
+					{
+						radio.currentbankfreq = a;
+						break;
+					}
+				}
+			}
 		}
 	}
-	if (selected_mode == RADIO_SETPROGFREQ)
+	else if (selected_mode == RADIO_SETPROGFREQ)
 	{
 		if (state)
 		{
-			
+			if (radio.currentbankfreq)
+			{
+				if (radio.currentbankfreq < 9) radio.currentbankfreq++;
+				else radio.currentbankfreq = 0;
+			}
+		}
+		else
+		{
+			if (radio.)
 		}
 	}
 }
 
 unsigned int ADC_Conversion(void)
 {
-	ADCSRA |= (1<<ADSC); //начинаем преобразование
-	while((ADCSRA & (1<<ADSC))); //при окончании преобразования пишет 0 в бит
+	ADCSRA |= (1<<ADSC); //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+	while((ADCSRA & (1<<ADSC))); //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ 0 пїЅ пїЅпїЅпїЅ
 	return (unsigned int) ADC;
 }
 
@@ -336,11 +426,11 @@ char check_analog_button(void){
 
 void check_time(void)
 {
-	if ((alarm1.hour == time.hour)&(alarm1.minute == time.minute)&(alarm1.second == time.second)) //совпали часы, минуты, секунды
+	if ((alarm1.hour == time.hour)&(alarm1.minute == time.minute)&(alarm1.second == time.second)) //пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	{
-		if (alarm1.daystates[time.day]) //если в соответсвующей ячейке с будильниками находится единица, то есть будильник включен
+		if (alarm1.daystates[time.day]) //пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		{
-			flags.alarm_state = 1; //ставится флаг сработавшего будильника
+			flags.alarm_state = 1; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		}
 	}
 	if ((utils.eachhoursignal_state)&(time.minute==0)&(time.second==0)&(time.hour > 6)&(time.hour < 21)) flags.eachhoursignal = 1;
@@ -351,19 +441,19 @@ void ADC_init(void)
 {
 	ADCL = 0x00;
 	ADCH = 0x00;
-	ADMUX = 0x00;  //Опорное напряжение 5В, нормальное направление данных, мультиплексор на ADC0
-	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //АЦП вкл, делитель на 128 (корректировать)
+	ADMUX = 0x00;  //пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 5пїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ ADC0
+	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //пїЅпїЅпїЅ пїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ 128 (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
 }
 
-void timer1_init(void) //16 битный таймер на энкодер и пару периферий
+void timer1_init(void) //16 пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 {
-	OCR1A = 25; //интервал в 100 микросекунд (10 кГц) при 16 мГц
+	OCR1A = 25; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ 100 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (10 пїЅпїЅпїЅ) пїЅпїЅпїЅ 16 пїЅпїЅпїЅ
 	TCCR1B |= (1 << WGM12);  //CTC
-	TCCR1B |= (1 << CS11) | (1 << CS10); //для 10 кГц
-	TIMSK1 |= (1 << OCIE1A); //включено прерывание
+	TCCR1B |= (1 << CS11) | (1 << CS10); //пїЅпїЅпїЅ 10 пїЅпїЅпїЅ
+	TIMSK1 |= (1 << OCIE1A); //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 }
 
-void timer0_init(void) //этот таймер будет считать секунды
+void timer0_init(void) //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 {
 	TCCR0A |= (1<<WGM01);
 	TCCR0B |= (1<<CS02)|(1<<CS00);
@@ -374,7 +464,7 @@ void timer0_init(void) //этот таймер будет считать секунды
 void timer2_init(void)
 {
 	TCCR2A |= (1<<COM2B1)|(1<<WGM21)|(1<<WGM20);
-	TCCR2B |= (1<<CS21)|(1<<CS22)|(1<<CS20); //16 мгц\1024 = 15k
+	TCCR2B |= (1<<CS21)|(1<<CS22)|(1<<CS20); //16 пїЅпїЅпїЅ\1024 = 15k
 	OCR2B = 0x00;
 	TCNT2 = 0x00;
 	TIMSK2 |= (OCIE2B);
@@ -517,12 +607,12 @@ void display(void)
 			utils.digits[2] = 0;
 			utils.digits[3] = time.day;
 		}
-		if (selected_mode == DAYSTATE) //ВНИМАНИЕ ВОТ ТУТ ПОДРЕЖИМЫ РАБОТАЮТ, ПРИ ПЕРЕХОДЕ НЕ МЕНЯТЬ selected_mode а менять days, повторное использование кода потому что
+		if (selected_mode == DAYSTATE) //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ selected_mode пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ days, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
 		{
 			utils.digits[0] = days;
 			utils.digits[1] = 0;
 			utils.digits[2] = 0;
-			utils.digits[3] = alarm1.daystates[days]; //вывожу стейтмент будильника для этого дня
+			utils.digits[3] = alarm1.daystates[days]; //пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
 		}
 		if (selected_mode == BRIGHT)
 		{
@@ -554,13 +644,26 @@ void display(void)
 		}
 		if (selected_mode == RADIO_SETPROGFREQ)
 		{
-			
+			if (radio.freqbankstate[radio.currentbankfreq])
+			{
+				utils.digits[0] = radio.bankfreq[radio.currentbankfreq]/1000;
+				utils.digits[1] = radio.bankfreq[radio.currentbankfreq]%1000/100;
+				utils.digits[2] = radio.bankfreq[radio.currentbankfreq]%100/10;
+				utils.digits[3] = radio.bankfreq[radio.currentbankfreq]%10;
+			}
+			else
+			{
+				utils.digits[0] = radio.currentbankfreq;
+				utils.digits[1] = 0;
+				utils.digits[2] = 0;
+				utils.digits[3] = 0;
+			}
 		}
 		
 		show(utils.digits);
 }
 
-void RTC_tweak(char what, char how)//what - 1 - часы, 2 - минуты, 3 - день, how - 1 - увеличить, 2 - уменьшить, 3 - обнулить, 4 - задать максимальное значение
+void RTC_tweak(char what, char how)//what - 1 - пїЅпїЅпїЅпїЅ, 2 - пїЅпїЅпїЅпїЅпїЅпїЅ, 3 - пїЅпїЅпїЅпїЅ, how - 1 - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, 2 - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, 3 - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, 4 - пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 {
 	I2C_StartCondition();
 	I2C_SendByte(RTCADRW);
@@ -593,7 +696,7 @@ void RTC_tweak(char what, char how)//what - 1 - часы, 2 - минуты, 3 - день, how 
 	I2C_StopCondition();
 }
 
-void Radio_tune(char what, char how) //нет обратной связи
+void Radio_tune(char what, char how) //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 {
 	if (what == 1)
 	{
@@ -634,7 +737,7 @@ int main(void)
 
     while (1) 
     {
-		//RTC_Read(); - раз в полсекунды надо проверять время а не в основном цикле
+		//RTC_Read(); - пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 		display();
 		flag_handler();
     }
