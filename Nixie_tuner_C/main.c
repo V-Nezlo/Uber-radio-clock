@@ -19,27 +19,27 @@
 
 #include "main.h"
 
-struct Time {uint8_t hour, minute, second, day;} time; //� ���� ���������� ������ �����
-struct Util {char eachhoursignal_state, deletefreqconf; uint8_t bright, seconds; uint8_t digits[4];} utils; //����������� ����������
+struct Time {uint8_t hour, minute, second, day;} time; //
+struct Util {char eachhoursignal_state,ledprogram_state, deletefreqconf; uint8_t bright, seconds; uint8_t digits[4];} utils; //����������� ����������
 struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //��� ������ ��� ��� ����������
 struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //��� ��� ��� �����
 struct But_flags {char mode, set, program;} but_flags; //����� ��� ������
-struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal;} flags; //����� ���������� ������
+struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal, ledprogram, timetocheckbutton;} flags; //����� ���������� ������
 enum Modes {CLOCK = 1, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, RADIO_PROGRAM, RADIO_SETPROGFREQ, STANDBY} selected_mode; //������ ����������� ��� ����������
 enum Days  {MONDAY = 1, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY} days; //������������ ���� ��� ��������� ��������������� ����
 
-const uint8_t key1 = PC2;
-const uint8_t key2 = PC3;
-const uint8_t key3 = PC4;
-const uint8_t key4 = PC5;
-const uint8_t dot1 = PB0;
-const uint8_t dot2 = PB2;
+const uint8_t key1 = PD4;
+const uint8_t key2 = PD5;
+const uint8_t key3 = PD6;
+const uint8_t key4 = PD7;
+const uint8_t dot1 = PB4;
+const uint8_t dot2 = PB5;
 
 ISR (TIMER1_COMPA_vect)
 {
 	static unsigned char new_state=0;
 	static unsigned char old_state=0;
-	new_state = (PIND&0b01100000)>>5;
+	new_state = (PINC&0b00001100)>>2;
 	switch(old_state | new_state)
 	{
 	  case 0x01: case 0x0e:
@@ -50,49 +50,43 @@ ISR (TIMER1_COMPA_vect)
 	  break;
 	}
 	old_state = new_state<<2;
-	
-	char pressedbutton = check_analog_button();
-	switch (pressedbutton)
-	{
-		case 0:
-		break;
-		case 1:
-		but_flags.mode = 1;
-		break;
-		case 2:
-		but_flags.program = 1;
-		break;
-	}
 }
 
 ISR (TIMER0_COMPA_vect)
 {
-	if (utils.seconds < 59) utils.seconds++;
-	else utils.seconds = 0;
-}
-
-ISR (TIMER2_COMPB_vect)
-{
-	if ((selected_mode == CLOCK)&(alarm1.isenabled))
+	static uint8_t timer2_comparator;
+	if (timer2_comparator < 60) ++timer2_comparator;
+	else
 	{
-		uint8_t pwm_counter = OCR2B;
-		static char direction = 0;
-		if ((pwm_counter < 255)&(direction == 0)) OCR2B = OCR2B + 1;
-		else if ((pwm_counter < 255)&(direction == 1)) OCR2B = OCR2B - 1;
-		if ((pwm_counter == 255)&(direction == 0)) direction = 1;
-		else if ((pwm_counter == 255)&(direction == 1)) direction = 0;
-	}
-	else OCR2B = 0xFF;
-}
+		if ((selected_mode == CLOCK)&(alarm1.isenabled))
+		{
+			uint8_t pwm_counter = OCR2B;
+			static char direction = 0;
+			if ((pwm_counter < 255)&(direction == 0)) OCR2B = OCR2B + 1;
+			else if ((pwm_counter < 255)&(direction == 1)) OCR2B = OCR2B - 1;
+			if ((pwm_counter == 255)&(direction == 0)) direction = 1;
+			else if ((pwm_counter == 255)&(direction == 1)) direction = 0;
+		}
+		else OCR2B = 0xFF;
 
-ISR (INT0_vect)
-{
-	but_flags.set = 1;
+		timer2_comparator = 0;
+	}
+
+	static uint8_t timer0_comparator;
+	if (timer0_comparator < 60) ++timer0_comparator;
+	else
+	{
+		if (utils.seconds < 59) ++utils.seconds;
+		else utils.seconds = 0;
+		timer0_comparator = 0;
+	}
+
+	flags.timetocheckbutton = 1;
 }
 
 void flag_handler(void)
 {
-	//���������� �������
+	//UTILITARY SECONDS
 	if (utils.seconds == 7)
 	{
 		if ((selected_mode > 1)&(selected_mode <= 9))
@@ -100,8 +94,21 @@ void flag_handler(void)
 			selected_mode = 1;
 			utils.seconds = 0;
 		}
+		else if (selected_mode == RADIO_PROGRAM)
+		{
+			selected_mode = RADIO_MANUAL;
+			utils.seconds = 0;
+		}
 	}
-	
+	//UTILITARY SECONDS
+
+	if (flags.timetocheckbutton == 1)
+	{
+		analog_button_procedure();
+		flags.timetocheckbutton = 0;
+	}
+
+	//ENDCODER HANDLER
 	if (flags.encoder_handler == 1)
 	{
 		encoder_procedure(1);
@@ -112,12 +119,13 @@ void flag_handler(void)
 		encoder_procedure(0);
 		flags.encoder_handler = 0;
 	}
-	//��� ��� ���������� ���������� ���������� ������ ������
+	//ENCODER HANDLER
+	//PRESSED SET BUTTON
 	if (but_flags.set == 1) //���� ������ ������ ��������
 	{
 		if (selected_mode < 9)
 		{
-			selected_mode++;
+			++selected_mode;
 			utils.seconds = 0;
 		}
 		else if (selected_mode == EACHHOURSIG)
@@ -142,6 +150,7 @@ void flag_handler(void)
 			radio.freqbankstate[radio.currentbankfreq] = 0;
 			eeprom_to_freq_transfer(radio.currentbankfreq, 0);
 			utils.deletefreqconf = 0;
+			utils.seconds = 0;
 			selected_mode = RADIO_MANUAL;
 		}
 		else if (selected_mode == RADIO_SETPROGFREQ)
@@ -150,7 +159,10 @@ void flag_handler(void)
 			freq_to_eeprom_transfer(radio.currentbankfreq, radio.current_frequency);
 			selected_mode = RADIO_PROGRAM;
 		}
+		but_flags.set = 0; //clear flag
 	}
+	// PRESSED SET BUTTON
+	// PRESSED MODE BUTTON
 	else if (but_flags.mode == 1)//���� ������ ������ ����-�����
 	{
 		if (selected_mode <= 9)
@@ -158,7 +170,16 @@ void flag_handler(void)
 			selected_mode = RADIO_MANUAL;
 			radio.current_frequency = eeprom_to_freq_transfer(11);
 		}
+		but_flags.mode = 0; //clear flag
 	}
+	else if (selected mode == RADIO_MANUAL)
+	{
+		uint16_t currenteepromfreq = eeprom_to_freq_transfer(11);
+		if (currenteepromfreq != radio.current_frequency) freq_to_eeprom_transfer(11, radio.current_frequency);
+	}
+
+	// PRESSED MODE BUTTON
+	// PRESSED PROGRAM BUTTON
 	else if (but_flags.program == 1) //���� ������ ������ �������
 	{
 		if (selected_mode == RADIO_MANUAL) 
@@ -178,8 +199,29 @@ void flag_handler(void)
 		}
 		else if (selected_mode == RADIO_PROGRAM)
 		{
-			
+			selected_mode = RADIO_MANUAL;
 		}
+		but_flags.program = 0; //clear flag
+	}
+	//PRESSED PROGRAM BUTTON
+	if ((flags.ledprogram)&(selected_mode == RADIO_PROGRAM))
+	{
+		utils.ledprogram_state = 1;
+		flags.ledprogram = 0;
+	}
+	else if ((flags.ledprogram)&(selected_mode == RADIO_SETPROGFREQ))
+	{
+		utils.ledprogram_state = 2;
+		flags.ledprogram = 0;
+	}
+	else if (flags.ledprogram == 0) utils.ledprogram_state = 0;
+
+	if (utils.ledprogram_state == 1) PORTD |= (1<<PD2);
+	else if (utils.ledprogram_state == 0) PORTD &= ~(1<<PD2);
+	else if (utils.ledprogram_state == 2)
+	{
+		//if utils.second.isEven() PORTD |= (1<<PD2); //как же мне лень писать проверку четности, господи
+		//else PORTD &= ~(PD2);
 	}
 }
 
@@ -279,12 +321,12 @@ void encoder_procedure(char state)
 	{
 		if (state)
 		{
-			if (alarm1.hour < 23) alarm1.hour++;
+			if (alarm1.hour < 23) ++alarm1.hour;
 			else alarm1.hour = 0;
 		}
 		else
 		{
-			if (alarm1.hour > 1) alarm1.hour--;
+			if (alarm1.hour > 1) --alarm1.hour;
 			else alarm1.hour = 0;
 		}
 	}
@@ -292,12 +334,12 @@ void encoder_procedure(char state)
 	{
 		if (state)
 		{
-			if (alarm1.minute < 59) alarm1.minute++;
+			if (alarm1.minute < 59) ++alarm1.minute;
 			else alarm1.minute = 0;
 		}
 		else
 		{
-			if (alarm1.minute > 1) alarm1.minute--;
+			if (alarm1.minute > 1) --alarm1.minute;
 			else alarm1.minute = 0;
 		}
 	}
@@ -323,12 +365,12 @@ void encoder_procedure(char state)
 	{
 		if (state)
 		{
-			if (utils.bright < MAXBRIGHT) utils.bright++;
+			if (utils.bright < MAXBRIGHT) ++utils.bright;
 			else utils.bright = 0;
 		}
 		else
 		{
-			if (utils.bright > 1) utils.bright--;
+			if (utils.bright > 1) --utils.bright;
 			else utils.bright = MAXBRIGHT;
 		}
 	}
@@ -398,13 +440,14 @@ void encoder_procedure(char state)
 		{
 			if (radio.currentbankfreq)
 			{
-				if (radio.currentbankfreq < 9) radio.currentbankfreq++;
+				if (radio.currentbankfreq < 9) ++radio.currentbankfreq;
 				else radio.currentbankfreq = 0;
 			}
 		}
 		else
 		{
-			if (radio.)
+			if (radio.currentbankfreq > 0) --radio.currentbankfreq;
+			else if (radio.currentfreq == 0) radio.currentbankfreq = 9;
 		}
 	}
 }
@@ -419,18 +462,38 @@ unsigned int ADC_Conversion(void)
 char check_analog_button(void){
 	unsigned int analog_value = ADC_Conversion();
 	if (analog_value <= 100) return 0;
-	if ((analog_value >= 100)&(analog_value <= 500))   return 1;
-	if (analog_value >= 500)						   return 2;
+	if ((analog_value >= 100)&(analog_value <= 600))   return 3;
+	if ((analog_value >= 600)&(analog_value <= 800))   return 2;
+	if (analog_value >= 800)						   return 1;
 	else return 0;
+}
+
+void analog_button_procedure(void)
+{
+	char pressedbutton = check_analog_button();
+	switch (pressedbutton)
+	{
+		case 0:
+		break;
+		case 1:
+		but_flags.set = 1;
+		break;
+		case 2:
+		but_flags.mode = 1;
+		break;
+		case 3:
+		but_flags.program = 1;
+		break;
+	}
 }
 
 void check_time(void)
 {
-	if ((alarm1.hour == time.hour)&(alarm1.minute == time.minute)&(alarm1.second == time.second)) //������� ����, ������, �������
+	if ((alarm1.hour == time.hour)&(alarm1.minute == time.minute)&(alarm1.second == time.second)&(alarm1.isenabled)) //������� ����, ������, �������
 	{
-		if (alarm1.daystates[time.day]) //���� � �������������� ������ � ������������ ��������� �������, �� ���� ��������� �������
+		if (alarm1.daystates[time.day]) //comparing alarm days
 		{
-			flags.alarm_state = 1; //�������� ���� ������������ ����������
+			flags.alarm_state = 1; //do alarm
 		}
 	}
 	if ((utils.eachhoursignal_state)&(time.minute==0)&(time.second==0)&(time.hour > 6)&(time.hour < 21)) flags.eachhoursignal = 1;
@@ -456,7 +519,7 @@ void timer1_init(void) //16 ������ ������ �� ���
 void timer0_init(void) //���� ������ ����� ������� �������
 {
 	TCCR0A |= (1<<WGM01);
-	TCCR0B |= (1<<CS02)|(1<<CS00);
+	TCCR0B |= (1<<CS02)|(1<<CS00); //prescaler 1024
 	OCR0A = 0xFF;
 	TIMSK0 |= (1<<OCIE0A);
 }
@@ -467,23 +530,17 @@ void timer2_init(void)
 	TCCR2B |= (1<<CS21)|(1<<CS22)|(1<<CS20); //16 ���\1024 = 15k
 	OCR2B = 0x00;
 	TCNT2 = 0x00;
-	TIMSK2 |= (OCIE2B);
+	TIMSK2 &= ~(OCIE2B); //INTERRUPTS DISABLE
 }
 
 void port_init(void)
 {
-	DDRB = 0xFF;
-	DDRD = 0xFF;
-	DDRC = 0xFF;
+	DDRB = 0xFF; // all to output
+	DDRD = 0xFF; // all to output
+	DDRC = 0b00110010; 
 	PORTB = 0x00;
 	PORTD = 0x00;
 	PORTC = 0x00;
-}
-
-void extinterrupt_init()
-{
-	EICRA |= (1<<ISC01);
-	EIMSK |= (1<<INT0);
 }
 
 void setCathode(uint8_t num)
@@ -556,10 +613,10 @@ void setCathode(uint8_t num)
 void show(uint8_t a[]){
 	uint8_t keys[] = { key1, key2, key3, key4 };
 	for (uint8_t i=0; i<=4; ++i){
-		PORTC |= (1<<(keys[i]));
+		PORTD &= ~(1<<(keys[i]));
 		setCathode(a[i]);
 		_delay_ms(1);
-		PORTC &= ~(1<<(keys[i]));
+		PORTD |= (1<<(keys[i]));
 	}
 }
 
@@ -729,7 +786,6 @@ int main(void)
 	port_init();
 	timer1_init();
 	timer0_init();
-	extinterrupt_init();
     I2C_Init();
 	ADC_init();
 	si4730_powerup();

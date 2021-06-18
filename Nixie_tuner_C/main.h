@@ -34,7 +34,6 @@ void timer1_init(void);
 void timer0_init(void);
 void timer2_init(void);
 void port_init(void);
-void extinterrupt_init();
 void setCathode(uint8_t num);
 void show(uint8_t a[]);
 void display(void);
