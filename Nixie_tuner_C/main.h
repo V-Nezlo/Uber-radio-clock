@@ -26,6 +26,7 @@ void freq_to_eeprom_transfer(char channel, uint16_t freq);
 uint16_t eeprom_to_freq_transfer(char channel);
 void eeprom_readfreqbank(void);
 void encoder_procedure(char state);
+void analog_button_procedure(void);
 unsigned int ADC_Conversion(void);
 char check_analog_button(void);
 void check_time(void);
