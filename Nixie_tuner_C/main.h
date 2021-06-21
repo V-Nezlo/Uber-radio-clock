@@ -20,6 +20,7 @@
 #include "rtc.h"
 #include "si4730.h"
 #include "eeprom.h"
+#include "usart.h"
 
 void flag_handler(void);
 void freq_to_eeprom_transfer(char channel, uint16_t freq);

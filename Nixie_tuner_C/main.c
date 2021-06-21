@@ -124,10 +124,22 @@ void flag_handler(void)
 	//PRESSED SET BUTTON
 	if (but_flags.set == 1) 
 	{
-		if (selected_mode < 9)
+		if ((selected_mode < 9)&(selected_mode != DAYSTATE))
 		{
 			++selected_mode;
 			utils.seconds = 0;
+		}
+		else if (selected_mode == DAYSTATE)
+		{
+			if (days < 7)
+			{
+				++days;
+			}
+			else if (days == 7)
+			{
+				selected_mode == BRIGHT;
+				days = 1;
+			}
 		}
 		else if (selected_mode == EACHHOURSIG)
 		{
@@ -508,7 +520,7 @@ void ADC_init(void)
 	ADCL = 0x00;
 	ADCH = 0x00;
 	ADMUX = 0x00;  // ADC0
-	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //��� ���, �������� �� 128 (��������������)
+	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 }
 
 void timer1_init(void) // таймер для энкодера и всякой мелочи
@@ -806,6 +818,7 @@ int main(void)
 	timer1_init();
 	timer0_init();
     I2C_Init();
+	USART_Init(6);
 	ADC_init();
 	si4730_powerup();
 	eeprom_readfreqbank();
