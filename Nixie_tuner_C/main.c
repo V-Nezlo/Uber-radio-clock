@@ -21,7 +21,7 @@ Autor - V-Nezlo (vlladimirka@gmail.com)
 struct Time {uint8_t hour, minute, second, day;} time; // временные переменные
 struct Util {char eachhoursignal_state,ledprogram_state, deletefreqconf; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
 struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //только 
-struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //��� ��� ��� �����
+struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //переменные для радио
 struct But_flags {char mode, set, program;} but_flags; //флаги нажатия клавиш
 struct Flags {char encoder_handler, mode, alarm_state, zummer, eachhoursignal, ledprogram, timetocheckbutton, timeforreadrtc;} flags; //общие флаги
 enum Modes {CLOCK = 1, SETHOUR, SETMINUTE, SETALARMHOUR, SETALARMMINUTE, SETDAY, DAYSTATE, BRIGHT, EACHHOURSIG, RADIO_MANUAL, RADIO_PROGRAM, RADIO_SETPROGFREQ, STANDBY} selected_mode; //только режимы, без подрежимов
@@ -51,17 +51,19 @@ ISR (TIMER1_COMPA_vect)
 	old_state = new_state<<2; //откатываемся
 }
 
+
+
 ISR (TIMER0_COMPA_vect)
 {	
 	static uint8_t timer2_comparator;
-	if (timer2_comparator < 60) ++timer2_comparator; //таймер на 1 секунду
+	if (timer2_comparator < 60) ++timer2_comparator; //таймер на 1 секунду, сделанный на двух
 	else
 	{
-		
+		if (timer2_comparator == 30) flags.timeforreadrtc = 1; //раз в полсекунды 
 		if (utils.seconds < 59) ++utils.seconds;
 		else utils.seconds = 0;
 		
-		flags.timetocheckbutton = 1;
+		flags.timetocheckbutton = 1; //поставим флаг проверки аналоговых кнопок
 		
 		if ((selected_mode == CLOCK)&(alarm1.isenabled)) //при включенном будильнике - работает шиммирование светодиода
 		{
@@ -79,12 +81,12 @@ ISR (TIMER0_COMPA_vect)
 
 }
 
-void flag_handler(void)
+void flag_handler(void) //глобальный обработчик флагов
 {
 	//UTILITARY SECONDS
-	if (utils.seconds == 7)
+	if (utils.seconds == 7) //если бездействие 7 секуед
 	{
-		if ((selected_mode > 1)&(selected_mode <= 9))
+		if ((selected_mode > 1)&(selected_mode <= 9)) //
 		{
 			selected_mode = 1;
 			utils.seconds = 0;
@@ -107,6 +109,13 @@ void flag_handler(void)
 	{
 		RTC_Read();
 		flags.timeforreadrtc = 0;
+	}
+	if (flags.eachhoursignal)
+	{
+		PORTC |= (1<<PC1);
+		_delay_ms(500);
+		PORTC &= ~(1<<PC1);
+		flags.eachhoursignal = 0;
 	}
 
 	//ENDCODER HANDLER
@@ -157,20 +166,20 @@ void flag_handler(void)
 			utils.deletefreqconf = 1;
 			utils.seconds = 0;
 		}
-		else if ((selected_mode == RADIO_PROGRAM)&(utils.deletefreqconf == 1))
+		else if ((selected_mode == RADIO_PROGRAM)&(utils.deletefreqconf == 1)) //удаление ячейки подтверждено
 		{
-			radio.bankfreq[radio.currentbankfreq] = 0;
-			radio.freqbankstate[radio.currentbankfreq] = 0;
-			freq_to_eeprom_transfer(radio.currentbankfreq, 0);
-			utils.deletefreqconf = 0;
-			utils.seconds = 0;
-			selected_mode = RADIO_MANUAL;
+			radio.bankfreq[radio.currentbankfreq] = 0;         //обнулили ячейку в памяти
+			radio.freqbankstate[radio.currentbankfreq] = 0;    //обнулили стейтмент ячейки в памяти
+			freq_to_eeprom_transfer(radio.currentbankfreq, 0); //обнулили ячейку в еепроме
+			utils.deletefreqconf = 0;						   //обнулили флаг удаления
+			utils.seconds = 0;								   //сбросили таймер
+			selected_mode = RADIO_MANUAL;					   //вернулись в режим мануал
 		}
-		else if (selected_mode == RADIO_SETPROGFREQ)
+		else if (selected_mode == RADIO_SETPROGFREQ) //запись в память
 		{
-			radio.bankfreq[radio.currentbankfreq] = radio.current_frequency;
-			freq_to_eeprom_transfer(radio.currentbankfreq, radio.current_frequency);
-			selected_mode = RADIO_PROGRAM;
+			radio.bankfreq[radio.currentbankfreq] = radio.current_frequency;		//записали в память
+			freq_to_eeprom_transfer(radio.currentbankfreq, radio.current_frequency);//записали в еепром
+			selected_mode = RADIO_PROGRAM;											//вернулись в режим программ
 		}
 		but_flags.set = 0; //clear flag
 	}
@@ -235,8 +244,9 @@ void flag_handler(void)
 	else if (utils.ledprogram_state == 0) PORTD &= ~(1<<PD2);
 	else if (utils.ledprogram_state == 2)
 	{
-		//if utils.second.isEven() PORTD |= (1<<PD2); //как же мне лень писать проверку четности, господи
-		//else PORTD &= ~(PD2);
+
+		if ((utils.seconds % 2) == 0) PORTD |= (1<<PD2); //нехитрый способ мигать раз в секунду
+		else PORTD &= ~(PD2);
 	}
 }
 
@@ -301,12 +311,12 @@ void encoder_procedure(char state)
 		}
 	}
 	
-	if (selected_mode == CLOCK)
+	if (selected_mode == CLOCK) //в этом режиме энкодер включает - выключает будильник
 	{
 	 if (state) alarm1.isenabled = 1;
 	 else alarm1.isenabled = 0;
 	}
-	else if (selected_mode == SETHOUR)
+	else if (selected_mode == SETHOUR) //в этом режиме происходит инкремент-декремент часов
 	{
 		if (state)
 		{
@@ -319,7 +329,7 @@ void encoder_procedure(char state)
 			else RTC_tweak(1, SETMAX);
 		}
 	}
-	else if (selected_mode == SETMINUTE)
+	else if (selected_mode == SETMINUTE) //инкремент-декремент минут
 	{
 		if (state)
 		{
@@ -332,7 +342,7 @@ void encoder_procedure(char state)
 			else RTC_tweak(2, SETMAX);
 		}
 	}
-	else if (selected_mode == SETALARMHOUR)
+	else if (selected_mode == SETALARMHOUR) //установка часов в будильнике
 	{
 		if (state)
 		{
@@ -345,7 +355,7 @@ void encoder_procedure(char state)
 			else alarm1.hour = 0;
 		}
 	}
-	else if (selected_mode == SETALARMMINUTE)
+	else if (selected_mode == SETALARMMINUTE) //установка минут в будильнике
 	{
 		if (state)
 		{
@@ -358,7 +368,7 @@ void encoder_procedure(char state)
 			else alarm1.minute = 0;
 		}
 	}
-	else if (selected_mode == SETDAY)
+	else if (selected_mode == SETDAY) //установка текущего дня
 	{
 		if (state)
 		{
@@ -376,7 +386,7 @@ void encoder_procedure(char state)
 		if (state) alarm1.daystates[days] = 1;
 		else alarm1.daystates[days] = 0;
 	}
-	else if (selected_mode == BRIGHT)
+	else if (selected_mode == BRIGHT) //установка "яркости"
 	{
 		if (state)
 		{
@@ -389,7 +399,7 @@ void encoder_procedure(char state)
 			else utils.bright = MAXBRIGHT;
 		}
 	}
-	else if (selected_mode == EACHHOURSIG)
+	else if (selected_mode == EACHHOURSIG) //вкл - выкл сигнал каждый час
 	{
 		if (state) utils.eachhoursignal_state = 1;
 		else utils.eachhoursignal_state = 0;
@@ -398,7 +408,7 @@ void encoder_procedure(char state)
 	{
 		if (state)
 		{
-			if (radio.currentbankfreq < 9)
+			if (radio.currentbankfreq < 9) 
 			{
 				uint8_t nextbank = radio.currentbankfreq + 1;
 				for (nextbank; nextbank <= 9; ++nextbank)
@@ -520,7 +530,7 @@ void ADC_init(void)
 	ADCL = 0x00;
 	ADCH = 0x00;
 	ADMUX = 0x00;  // ADC0
-	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
+	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //включили-поделили
 }
 
 void timer1_init(void) // таймер для энкодера и всякой мелочи
@@ -548,7 +558,7 @@ void timer2_init(void)
 	TIMSK2 &= ~(OCIE2B); //выключили прерывание, этот таймер только для шим
 }
 
-void port_init(void)
+void port_init(void) //направление и инициация портов
 {
 	DDRB = 0xFF; // all to output
 	DDRD = 0xFF; // all to output
@@ -637,42 +647,42 @@ void show(uint8_t a[]){
 
 void display(void)
 {
-		if (selected_mode == CLOCK)
+		if (selected_mode == CLOCK) //показываем время
 		{
 			utils.digits[0] = time.hour/100;
 			utils.digits[1] = time.hour%100/10;
 			utils.digits[2] = time.minute%10;
 			utils.digits[3] = time.minute%100/10;
 		}
-		if (selected_mode == SETHOUR)
+		if (selected_mode == SETHOUR) //настраиваем часы
 		{
 			utils.digits[0] = time.hour/100;
 			utils.digits[1] = time.hour%100/10;
 			utils.digits[2] = 0;
 			utils.digits[3] = 0;
 		}
-		if (selected_mode == SETMINUTE)
+		if (selected_mode == SETMINUTE) //настраиваем минуты
 		{
 			utils.digits[0] = 0;
 			utils.digits[1] = 0;
 			utils.digits[2] = time.minute%10;
 			utils.digits[3] = time.minute%100/10;
 		}
-		if (selected_mode == SETALARMHOUR)
+		if (selected_mode == SETALARMHOUR) //настраиваем часы будильника
 		{
 			utils.digits[0] = alarm1.hour/100;
 			utils.digits[1] = alarm1.hour%100/10;
 			utils.digits[2] = 0;
 			utils.digits[3] = 0;
 		}
-		if (selected_mode == SETALARMMINUTE)
+		if (selected_mode == SETALARMMINUTE) //настраиваем минуты будильника
 		{
 			utils.digits[0] = 0;
 			utils.digits[1] = 0;
 			utils.digits[2] = alarm1.minute%10;
 			utils.digits[3] = alarm1.minute%100/10;
 		}
-		if (selected_mode == SETDAY)
+		if (selected_mode == SETDAY) //настраиваем текущий день
 		{
 			utils.digits[0] = 0;
 			utils.digits[1] = 0;
