@@ -105,12 +105,12 @@ void flag_handler(void) //глобальный обработчик флагов
 		flags.timetocheckbutton = 0;
 	}
 	
-	if (flags.timeforreadrtc)
+	if (flags.timeforreadrtc) //читаем РТС
 	{
 		RTC_Read();
 		flags.timeforreadrtc = 0;
 	}
-	if (flags.eachhoursignal)
+	if (flags.eachhoursignal) //отыгрываем сигнал раз в час
 	{
 		PORTC |= (1<<PC1);
 		_delay_ms(500);
@@ -133,24 +133,24 @@ void flag_handler(void) //глобальный обработчик флагов
 	//PRESSED SET BUTTON
 	if (but_flags.set == 1) 
 	{
-		if ((selected_mode < 9)&(selected_mode != DAYSTATE))
+		if ((selected_mode < 9)&(selected_mode != DAYSTATE)) //переключение режимов внутри подраздела часов
 		{
 			++selected_mode;
 			utils.seconds = 0;
 		}
-		else if (selected_mode == DAYSTATE)
+		else if (selected_mode == DAYSTATE) //переключение подрежимов в режиме настройки будильников по дням
 		{
 			if (days < 7)
 			{
 				++days;
 			}
-			else if (days == 7)
+			else if (days == 7) //ушли в режим настройки яркости
 			{
 				selected_mode == BRIGHT;
 				days = 1;
 			}
 		}
-		else if (selected_mode == EACHHOURSIG)
+		else if (selected_mode == EACHHOURSIG) 
 		{
 			selected_mode = CLOCK;
 			utils.seconds = 0;
@@ -185,13 +185,13 @@ void flag_handler(void) //глобальный обработчик флагов
 	}
 	// PRESSED SET BUTTON
 	// PRESSED MODE BUTTON
-	else if (but_flags.mode == 1)
+	else if (but_flags.mode == 1) 
 	{
 		if (selected_mode <= 9)
 		{
 			selected_mode = RADIO_MANUAL;
 			radio.current_frequency = eeprom_to_freq_transfer(11);
-			Radio_tune(2, 0); //unmute
+			Radio_tune(2, 0); //включаем выход радио
 		}
 		but_flags.mode = 0; //clear flag
 	}
@@ -199,7 +199,7 @@ void flag_handler(void) //глобальный обработчик флагов
 	{	
 		uint16_t currenteepromfreq = eeprom_to_freq_transfer(11);
 		if (currenteepromfreq != radio.current_frequency) freq_to_eeprom_transfer(11, radio.current_frequency);
-		Radio_tune(2, 1); //mute
+		Radio_tune(2, 1); //выключаем выход радио
 	}
 
 	// PRESSED MODE BUTTON
@@ -573,64 +573,64 @@ void setCathode(uint8_t num)
 	switch(num)
 	{
 		case 0:
-		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
+		PORTD &= ~(1<<PD0);
+		PORTD &= ~(1<<PD1);
 		PORTD |= (1<<PD2);
 		PORTD |= (1<<PD3);
 		break;
 		case 1:
-		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
+		PORTD &= ~(1<<PD0);
+		PORTD &= ~(1<<PD1);
 		PORTD |= (1<<PD2);
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD3);
 		break;
 		case 2:
-		PORTD |= (1<<PD0);
+		PORTD &= ~(1<<PD0);
 		PORTD |= (1<<PD1);
 		PORTD |= (1<<PD2);
 		PORTD |= (1<<PD3);
 		break;
 		case 3:
-		PORTD |= (1<<PD0);
+		PORTD &= ~(1<<PD0);
 		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD2);
+		PORTD &= ~(1<<PD3);
 		break;
 		case 4:
-		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
+		PORTD &= ~(1<<PD0);
+		PORTD &= ~(1<<PD1);
+		PORTD &= ~(1<<PD2);
 		PORTD |= (1<<PD3);
 		break;
 		case 5:
 		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
+		PORTD &= ~ (1<<PD1);
+		PORTD &= ~(1<<PD2);
 		PORTD |= (1<<PD3);
 		break;
 		case 6:
 		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD1);
+		PORTD &= ~(1<<PD2);
+		PORTD &= ~(1<<PD3);
 		break;
 		case 7:
-		PORTD |= (1<<PD0);
-		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD0);
+		PORTD &= ~(1<<PD1);
+		PORTD &= ~(1<<PD2);
+		PORTD &= ~(1<<PD3);
 		break;
 		case 8:
-		PORTD |= (1<<PD0);
+		PORTD &= ~(1<<PD0);
 		PORTD |= (1<<PD1);
-		PORTD |= (1<<PD2);
+		PORTD &= ~(1<<PD2);
 		PORTD |= (1<<PD3);
 		break;
 		case 9:
-		PORTD |= (1<<PD0);
+		PORTD &= ~(1<<PD0);
 		PORTD |= (1<<PD1);
 		PORTD |= (1<<PD2);
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD3);
 		break;
 	}
 }
@@ -696,35 +696,35 @@ void display(void)
 			utils.digits[2] = 0;
 			utils.digits[3] = alarm1.daystates[days]; //выводим статус этого дня
 		}
-		if (selected_mode == BRIGHT)
+		if (selected_mode == BRIGHT) //настройка типа яркости
 		{
 			utils.digits[0] = 8;
 			utils.digits[1] = 0;
 			utils.digits[2] = utils.bright%10;
 			utils.digits[3] = utils.bright%10/10;
 		}
-		if (selected_mode == EACHHOURSIG)
+		if (selected_mode == EACHHOURSIG) //вкл-выкл звук каждый час
 		{
 			utils.digits[0] = 9;
 			utils.digits[1] = 0;
 			utils.digits[2] = 0;
 			utils.digits[3] = utils.eachhoursignal_state;
 		}
-		if (selected_mode == RADIO_MANUAL)
+		if (selected_mode == RADIO_MANUAL) //режим отображения радио - мануальный - показываем текущую частоту
 		{
 			utils.digits[0] = radio.current_frequency/1000;
 			utils.digits[1] = radio.current_frequency%1000/100;
 			utils.digits[2] = radio.current_frequency%100/10;
 			utils.digits[3] = radio.current_frequency%10;
 		}
-		if (selected_mode == RADIO_PROGRAM)
+		if (selected_mode == RADIO_PROGRAM) //тут у нас банки памяти
 		{
 			utils.digits[0] = radio.bankfreq[radio.currentbankfreq]/1000;
 			utils.digits[1] = radio.bankfreq[radio.currentbankfreq]%1000/100;
 			utils.digits[2] = radio.bankfreq[radio.currentbankfreq]%100/10;
 			utils.digits[3] = radio.bankfreq[radio.currentbankfreq]%10;
 		}
-		if (selected_mode == RADIO_SETPROGFREQ)
+		if (selected_mode == RADIO_SETPROGFREQ) 
 		{
 			if (radio.freqbankstate[radio.currentbankfreq])
 			{
@@ -824,14 +824,14 @@ void variable_init(void) //на всякий пожарный проинициа
 
 int main(void)
 {
-	port_init();
-	timer1_init();
+	port_init(); //проинициазировали порты
+	timer1_init(); //включили таймеры 0 и 1
 	timer0_init();
-    I2C_Init();
-	USART_Init(6);
-	ADC_init();
-	si4730_powerup();
-	eeprom_readfreqbank();
+    I2C_Init(); //включили i2c
+	USART_Init(6); //включили юарт
+	ADC_init(); //включили ацп
+	si4730_powerup(); //включили радиомикросхему
+	eeprom_readfreqbank(); //прочитали банки частот из еепром
 
     while (1) 
     {
