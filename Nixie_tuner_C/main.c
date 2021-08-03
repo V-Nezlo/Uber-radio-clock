@@ -14,11 +14,13 @@ Autor - V-Nezlo (vlladimirka@gmail.com)
 #define MAXSUPFREQ 10800
 #define MINSUPFREQ 7600
 #define FREQEDITSTEP 10
+#define EACHHOURSIG_MINHOUR 6
+#define EACHHOURSIG_MAXHOUR 21
 //8970 - 89,7 MHz
 
 #include "main.h"
 
-struct Time {uint8_t hour, minute, second, day;} time; // временные переменные
+struct Time {uint8_t hour, minute, second, day;} time; // временнЫе переменные
 struct Util {char eachhoursignal_state,ledprogram_state, deletefreqconf; uint8_t bright, seconds; uint8_t digits[4];} utils; //утилитарные переменные
 struct Alarm {uint8_t hour, minute, second; char isenabled ;uint8_t daystates[7];} alarm1; //только 
 struct Radio {uint16_t current_frequency; uint16_t bankfreq[10]; uint8_t currentbankfreq; uint8_t freqbankstate[10];} radio; //переменные для радио
@@ -59,7 +61,11 @@ ISR (TIMER0_COMPA_vect)
 	if (timer2_comparator < 60) ++timer2_comparator; //таймер на 1 секунду, сделанный на двух
 	else
 	{
-		if (timer2_comparator == 30) flags.timeforreadrtc = 1; //раз в полсекунды 
+		if (timer2_comparator == 30) //раз в полсекунды 
+		{
+			flags.timeforreadrtc = 1; //ставим флаг необходимости прочитать RTC
+			check_time();			//проверяем будильники, каждочасный сигнал и прочее
+		} 
 		if (utils.seconds < 59) ++utils.seconds;
 		else utils.seconds = 0;
 		
@@ -110,7 +116,7 @@ void flag_handler(void) //глобальный обработчик флагов
 		RTC_Read();
 		flags.timeforreadrtc = 0;
 	}
-	if (flags.eachhoursignal) //отыгрываем сигнал раз в час
+	if (flags.eachhoursignal) //отыгрываем сигнал раз в час если стоит нужный флаг
 	{
 		PORTC |= (1<<PC1);
 		_delay_ms(500);
@@ -252,6 +258,7 @@ void flag_handler(void) //глобальный обработчик флагов
 
 void freq_to_eeprom_transfer(char channel, uint16_t freq) //функция записывает в нужный канал нужную частоту
 {
+	cli();
 	unsigned char HFreqE = freq >> 8;
 	unsigned char LFreqE = freq & 0x00FF;
 	
@@ -263,10 +270,12 @@ void freq_to_eeprom_transfer(char channel, uint16_t freq) //функция за�
 	channelAddr2 = channelAddr1 + 1;
 	EEPROM_write(channelAddr1, LFreqE);
 	EEPROM_write(channelAddr2, HFreqE);
+	sei();
 }
 
 uint16_t eeprom_to_freq_transfer(char channel) //возвращает частоту из нужного канала
 {
+	cli();
 	unsigned char HFreqE = 0; 
 	unsigned char LFreqE = 0;
 	
@@ -280,6 +289,7 @@ uint16_t eeprom_to_freq_transfer(char channel) //возвращает часто
 	HFreqE = EEPROM_read(channelAddr2);
 	uint16_t freq = LFreqE|(HFreqE<<8);
 	return freq;
+	sei();
 }
 
 void eeprom_readfreqbank(void)
@@ -521,7 +531,7 @@ void check_time(void)
 			flags.alarm_state = 1; //флаг будильника ставим
 		}
 	}
-	if ((utils.eachhoursignal_state)&(time.minute==0)&(time.second==0)&(time.hour > 6)&(time.hour < 21)) flags.eachhoursignal = 1; //кричим в зуммер при каждом часе
+	if ((utils.eachhoursignal_state)&(time.minute==0)&(time.second==0)&(time.hour > EACHHOURSIG_MINHOUR)&(time.hour < EACHHOURSIG_MAXHOUR)) flags.eachhoursignal = 1; //кричим в зуммер при каждом часе
 
 }
 
@@ -747,6 +757,7 @@ void display(void)
 
 void RTC_tweak(char what, char how)//what - 1 - hour, 2 - minute, 3 - day
 {
+	cli();
 	I2C_StartCondition();
 	I2C_SendByte(RTCADRW);
 	
@@ -776,10 +787,12 @@ void RTC_tweak(char what, char how)//what - 1 - hour, 2 - minute, 3 - day
 		else if (how == SETMAX) I2C_SendByte(RTC_ConvertFromBinDec(7));
 	}
 	I2C_StopCondition();
+	sei();
 }
 
 void Radio_tune(char what, char how) //what - 1 - freq, 2 -mutestae; how - 1 - muteset, 0 - muteunset
 {
+	cli();
 	if (what == 1)
 	{
 		if (how == INCREMENT)
@@ -808,6 +821,7 @@ void Radio_tune(char what, char how) //what - 1 - freq, 2 -mutestae; how - 1 - m
 		if (how == 1) si4730_mute(1);
 		else si4730_mute(0);
 	}
+	sei();
 }
 
 void variable_init(void) //на всякий пожарный проинициализируем все элементы в структурах
@@ -832,12 +846,12 @@ int main(void)
 	ADC_init(); //включили ацп
 	si4730_powerup(); //включили радиомикросхему
 	eeprom_readfreqbank(); //прочитали банки частот из еепром
+	sei(); //пошли прерывания
 
     while (1) 
     {
 		display();
 		flag_handler();
-		check_time();
     }
 }
  
