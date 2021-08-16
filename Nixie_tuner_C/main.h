@@ -2,7 +2,7 @@
  * main.h
  *
  * Created: 12.06.2021 16:33:02
- *  Author: Nikita
+ *  Author: V-Nezlo
  */ 
 
 

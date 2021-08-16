@@ -38,8 +38,8 @@ const uint8_t dot2 = PB5;
 
 ISR (TIMER1_COMPA_vect)
 {
-	static unsigned char new_state=0;
-	static unsigned char old_state=0;
+	volatile static unsigned char new_state=0;
+	volatile static unsigned char old_state=0;
 	new_state = (PINC&0b00001100)>>2;
 	switch(old_state | new_state) //проверяем пины энкодера
 	{
@@ -57,8 +57,8 @@ ISR (TIMER1_COMPA_vect)
 
 ISR (TIMER0_COMPA_vect)
 {	
-	static uint8_t timer2_comparator;
-	if (timer2_comparator < 60) ++timer2_comparator; //таймер на 1 секунду, сделанный на двух
+	volatile static uint8_t timer2_comparator;
+	if (timer2_comparator <= 60) ++timer2_comparator; //таймер на 1 секунду, сделанный на двух таймерах
 	else
 	{
 		if (timer2_comparator == 30) //раз в полсекунды 
@@ -66,7 +66,7 @@ ISR (TIMER0_COMPA_vect)
 			flags.timeforreadrtc = 1; //ставим флаг необходимости прочитать RTC
 			check_time();			//проверяем будильники, каждочасный сигнал и прочее
 		} 
-		if (utils.seconds < 59) ++utils.seconds;
+		if (utils.seconds < 59) ++utils.seconds; //а тут именно секунды
 		else utils.seconds = 0;
 		
 		flags.timetocheckbutton = 1; //поставим флаг проверки аналоговых кнопок
@@ -74,7 +74,7 @@ ISR (TIMER0_COMPA_vect)
 		if ((selected_mode == CLOCK)&(alarm1.isenabled)) //при включенном будильнике - работает шиммирование светодиода
 		{
 			uint8_t pwm_counter = OCR2B;
-			static char direction = 0;
+			volatile static char direction = 0;
 			if ((pwm_counter < 255)&(direction == 0)) OCR2B = OCR2B + 1;
 			else if ((pwm_counter < 255)&(direction == 1)) OCR2B = OCR2B - 1;//вверх или вниз
 			if ((pwm_counter == 255)&(direction == 0)) direction = 1;
@@ -90,14 +90,14 @@ ISR (TIMER0_COMPA_vect)
 void flag_handler(void) //глобальный обработчик флагов
 {
 	//UTILITARY SECONDS
-	if (utils.seconds == 7) //если бездействие 7 секуед
+	if (utils.seconds == 7) //если бездействие 7 секунд
 	{
-		if ((selected_mode > 1)&(selected_mode <= 9)) //
+		if ((selected_mode > 1)&(selected_mode <= 9)) //если в первых девяти режимах
 		{
-			selected_mode = 1;
-			utils.seconds = 0;
+			selected_mode = 1; //возвращаемся в режим часов
+			utils.seconds = 0; //сбрасываем счетчик на 7
 		}
-		else if (selected_mode == RADIO_PROGRAM)
+		else if (selected_mode == RADIO_PROGRAM) //если в режиме выбора банков - возвращаемся в мануальный
 		{
 			selected_mode = RADIO_MANUAL;
 			utils.seconds = 0;
@@ -288,8 +288,9 @@ uint16_t eeprom_to_freq_transfer(char channel) //возвращает часто
 	LFreqE = EEPROM_read(channelAddr1);
 	HFreqE = EEPROM_read(channelAddr2);
 	uint16_t freq = LFreqE|(HFreqE<<8);
-	return freq;
 	sei();
+	return freq;
+
 }
 
 void eeprom_readfreqbank(void)
@@ -496,11 +497,10 @@ unsigned int ADC_Conversion(void)
 
 char check_analog_button(void){ //смотрим на напряжения и решаем, какая из кнопок нажата
 	unsigned int analog_value = ADC_Conversion(); 
-	if (analog_value <= 100) return 0;
+	if (analog_value <= 100) return 0; //если напряжение меньше 100 - выходим
 	else if ((analog_value >= 100)&(analog_value <= 600))   return 3;
 	else if ((analog_value >= 600)&(analog_value <= 800))   return 2;
 	else if (analog_value >= 800)						    return 1;
-	else return 0;
 }
 
 void analog_button_procedure(void) //ставим флаги нажатых кнопок при необходимости
@@ -650,7 +650,9 @@ void show(uint8_t a[]){
 	for (uint8_t i=0; i<=4; ++i){
 		PORTD &= ~(1<<(keys[i]));
 		setCathode(a[i]);
-		_delay_ms(1);
+		_delay_ms(1); //Тут должна быть BRIGHT, но ее нет, а почему? А потому что аргумент delay - compile-time переменная(константная), 
+		// и runtime-переменную туда не положить. И что делать? Муравью х** приделать. А если серьезно то нужно завести еще один таймер, благо
+		// таймер2 свободен, настроить его на 1 миллисекунду и считать им, на финальном этапе добавим
 		PORTD |= (1<<(keys[i]));
 	}
 }
@@ -826,7 +828,7 @@ void Radio_tune(char what, char how) //what - 1 - freq, 2 -mutestae; how - 1 - m
 
 void variable_init(void) //на всякий пожарный проинициализируем все элементы в структурах
 {
-	
+	//это трогать не надо, совсем
 	flags = (struct Flags) {0, 0, 0, 0, 0, 0, 0, 0};
 	utils = (struct Util)  {0, 0, 0, 2, 0, {0,0,0,0}};
 	alarm1 = (struct Alarm) {0, 0, 0, 0, {0,0,0,0,0,0,0}};
@@ -842,7 +844,7 @@ int main(void)
 	timer1_init(); //включили таймеры 0 и 1
 	timer0_init();
     I2C_Init(); //включили i2c
-	USART_Init(6); //включили юарт
+	USART_Init(6); //включили юарт на скорости 6(см. в даташит)
 	ADC_init(); //включили ацп
 	si4730_powerup(); //включили радиомикросхему
 	eeprom_readfreqbank(); //прочитали банки частот из еепром
